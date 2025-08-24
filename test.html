@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DoodleDrop Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .upload-form {
+            border: 2px dashed #ccc;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        input[type="file"] {
+            margin: 10px 0;
+        }
+        input[type="text"] {
+            width: 200px;
+            padding: 8px;
+            margin: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .result {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 5px;
+            display: none;
+        }
+        .success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .images {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .image-container {
+            text-align: center;
+        }
+        .image-container img {
+            max-width: 300px;
+            max-height: 300px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .doodle-list {
+            margin-top: 30px;
+        }
+        .doodle-item {
+            background: #f8f9fa;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border: 1px solid #e9ecef;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 DoodleDrop Test Interface</h1>
+        
+        <div class="upload-form">
+            <h3>Upload a Doodle</h3>
+            <form id="uploadForm" enctype="multipart/form-data">
+                <div>
+                    <input type="file" id="imageFile" accept="image/*" required>
+                </div>
+                <div>
+                    <input type="text" id="uploaderName" placeholder="Your name (optional)">
+                </div>
+                <div>
+                    <button type="submit">Upload & Process</button>
+                </div>
+            </form>
+        </div>
+
+        <div id="result" class="result"></div>
+
+        <div class="images" id="imagesContainer" style="display: none;"></div>
+
+        <div>
+            <button onclick="loadDoodles()">Load All Doodles</button>
+        </div>
+
+        <div class="doodle-list">
+            <h3>Uploaded Doodles</h3>
+            <div id="doodlesList"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000';
+
+        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const fileInput = document.getElementById('imageFile');
+            const uploaderInput = document.getElementById('uploaderName');
+            const resultDiv = document.getElementById('result');
+            const imagesContainer = document.getElementById('imagesContainer');
+            
+            if (!fileInput.files[0]) {
+                showResult('Please select an image file', 'error');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('image', fileInput.files[0]);
+            formData.append('uploader', uploaderInput.value || 'anonymous');
+
+            try {
+                showResult('Uploading and processing...', 'success');
+                
+                const response = await fetch(`${API_BASE}/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showResult(`Upload successful! File: ${result.doodle.filename}`, 'success');
+                    showImages(result.doodle.originalUrl, result.doodle.processedUrl);
+                    loadDoodles(); // Refresh the list
+                } else {
+                    showResult(`Upload failed: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                showResult(`Error: ${error.message}`, 'error');
+            }
+        });
+
+        function showResult(message, type) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.textContent = message;
+            resultDiv.className = `result ${type}`;
+            resultDiv.style.display = 'block';
+        }
+
+        function showImages(originalUrl, processedUrl) {
+            const container = document.getElementById('imagesContainer');
+            container.innerHTML = `
+                <div class="image-container">
+                    <h4>Original</h4>
+                    <img src="${API_BASE}${originalUrl}" alt="Original image">
+                </div>
+                <div class="image-container">
+                    <h4>4-Color Grayscale</h4>
+                    <img src="${API_BASE}${processedUrl}" alt="Processed image">
+                </div>
+            `;
+            container.style.display = 'flex';
+        }
+
+        async function loadDoodles() {
+            try {
+                const response = await fetch(`${API_BASE}/upload/list`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    displayDoodles(result.doodles);
+                } else {
+                    showResult(`Failed to load doodles: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                showResult(`Error loading doodles: ${error.message}`, 'error');
+            }
+        }
+
+        function displayDoodles(doodles) {
+            const listContainer = document.getElementById('doodlesList');
+            
+            if (doodles.length === 0) {
+                listContainer.innerHTML = '<p>No doodles uploaded yet.</p>';
+                return;
+            }
+
+            listContainer.innerHTML = doodles.map(doodle => `
+                <div class="doodle-item">
+                    <h4>${doodle.filename}</h4>
+                    <p><strong>By:</strong> ${doodle.uploader}</p>
+                    <p><strong>Uploaded:</strong> ${new Date(doodle.timestamp).toLocaleString()}</p>
+                    <p><strong>Size:</strong> ${(doodle.fileSize / 1024).toFixed(1)} KB</p>
+                    <div class="images">
+                        <div class="image-container">
+                            <img src="${API_BASE}${doodle.originalUrl}" alt="Original" style="max-width: 150px; max-height: 150px;">
+                        </div>
+                        <div class="image-container">
+                            <img src="${API_BASE}${doodle.processedUrl}" alt="Processed" style="max-width: 150px; max-height: 150px;">
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Load doodles when page loads
+        loadDoodles();
+    </script>
+</body>
+</html>
