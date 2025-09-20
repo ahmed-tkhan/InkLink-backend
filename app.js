@@ -4,6 +4,7 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const uploadRoute = require('./routes/upload');
+const rawDoodleRoute = require('./routes/rawDoodle');
 const { checkStorageAccess, storageDir } = require('./utils/storage');
 
 const app = express();
@@ -18,6 +19,7 @@ app.use('/files', express.static(storageDir));
 
 // API Routes
 app.use('/upload', uploadRoute);
+app.use('/api/raw-doodle', rawDoodleRoute);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -40,6 +42,7 @@ app.get('/', (req, res) => {
       get: 'GET /upload/:id',
       delete: 'DELETE /upload/:id',
       files: 'GET /files/{type}/{filename}',
+      rawDoodle: 'GET /api/raw-doodle/:id',
       health: 'GET /health'
     }
   });
@@ -109,6 +112,7 @@ async function startServer() {
       console.log(`   GET    http://localhost:${PORT}/upload/:id`);
       console.log(`   DELETE http://localhost:${PORT}/upload/:id`);
       console.log(`   GET    http://localhost:${PORT}/files/{type}/{filename}`);
+      console.log(`   GET    http://localhost:${PORT}/api/raw-doodle/:id`);
       console.log(`   GET    http://localhost:${PORT}/health`);
       console.log('\n🎨 Ready to process your doodles!');
     });

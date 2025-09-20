@@ -106,9 +106,65 @@ const isValidImage = async (filePath) => {
   }
 };
 
+/**
+ * Convert a processed 4-color grayscale PNG to 2bpp binary format
+ * @param {string} inputPath - Path to processed 4-color grayscale PNG
+ * @returns {Promise<Buffer>} - 2bpp binary data (4 pixels per byte, big-endian)
+ */
+const convertTo2bpp = async (inputPath) => {
+  try {
+    // Read the processed PNG and convert to single-channel grayscale
+    const { data, info } = await sharp(inputPath)
+      .grayscale() // Ensure single channel
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+
+    // Verify it's 200x200
+    if (info.width !== 200 || info.height !== 200) {
+      throw new Error(`Invalid image dimensions: ${info.width}x${info.height}, expected 200x200`);
+    }
+
+    // Verify single channel after grayscale conversion
+    if (info.channels !== 1) {
+      throw new Error(`Invalid channels after grayscale conversion: ${info.channels}, expected 1`);
+    }
+
+    // Convert 4-color values (0,85,170,255) to 2-bit values (0,1,2,3)
+    const convertValue = (pixel) => {
+      if (pixel <= 42) return 0; // 0-42 → 0 (00)
+      if (pixel <= 127) return 1; // 43-127 → 1 (01) 
+      if (pixel <= 212) return 2; // 128-212 → 2 (10)
+      return 3; // 213-255 → 3 (11)
+    };
+
+    // Pack 4 pixels per byte (big-endian)
+    const totalPixels = data.length;
+    const outputBytes = Math.ceil(totalPixels / 4);
+    const result = Buffer.alloc(outputBytes);
+
+    for (let i = 0; i < totalPixels; i += 4) {
+      const pixel0 = convertValue(data[i] || 0);
+      const pixel1 = convertValue(data[i + 1] || 0);
+      const pixel2 = convertValue(data[i + 2] || 0);
+      const pixel3 = convertValue(data[i + 3] || 0);
+      
+      // Pack 4 pixels into 1 byte (big-endian: pixel0 in bits 7-6, pixel1 in bits 5-4, etc.)
+      const packedByte = (pixel0 << 6) | (pixel1 << 4) | (pixel2 << 2) | pixel3;
+      result[Math.floor(i / 4)] = packedByte;
+    }
+
+    console.log(`Converted ${inputPath} to 2bpp binary: ${totalPixels} pixels → ${outputBytes} bytes`);
+    return result;
+  } catch (error) {
+    console.error('2bpp conversion error:', error);
+    throw new Error(`Failed to convert to 2bpp: ${error.message}`);
+  }
+};
+
 module.exports = {
   processGrayscale,
   createThumbnail,
   getImageMetadata,
-  isValidImage
+  isValidImage,
+  convertTo2bpp
 };
