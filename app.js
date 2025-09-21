@@ -1,4 +1,9 @@
-require('dotenv').config();
+// Load environment variables - handle gracefully if dotenv is not available
+try {
+  require('dotenv').config();
+} catch (error) {
+  console.log('ℹ️  Running without dotenv - using environment variables directly');
+}
 const express = require('express');
 const cors = require('cors');
 const path = require('path');

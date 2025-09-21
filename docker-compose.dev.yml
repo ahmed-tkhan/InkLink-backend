@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  inklink-backend:
+    build: .
+    container_name: inklink-backend-dev
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+    volumes:
+      # Mount source code for development
+      - .:/app
+      - /app/node_modules
+      # Persist data
+      - inklink_dev_data:/app/storage
+    command: npm run dev
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  inklink_dev_data:
+    driver: local
