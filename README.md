@@ -127,7 +127,37 @@ Edit `.env` file to customize:
 
 ## Deployment
 
-For production deployment:
+### 🐳 Docker Deployment (Recommended)
+
+**Quick Start:**
+```bash
+# Clone and deploy in one command
+git clone https://github.com/ahmed-tkhan/InkLink-backend.git
+cd InkLink-backend
+./deploy.sh deploy
+```
+
+**Manual Docker Deployment:**
+```bash
+# Production
+docker compose up -d --build
+
+# Development with hot reload
+docker compose -f docker-compose.dev.yml up -d --build
+```
+
+**Features:**
+- 🐳 Containerized deployment
+- 🔒 Security best practices
+- 📊 Built-in health checks
+- 🔄 Easy updates and backups
+- 📖 Complete self-hosting guide
+
+👉 **See [SELF_HOSTING.md](./SELF_HOSTING.md) for complete documentation**
+
+### Traditional Deployment
+
+For manual/traditional deployment:
 1. Set `NODE_ENV=production` in `.env`
 2. Use a process manager like PM2
 3. Set up nginx reverse proxy (optional)

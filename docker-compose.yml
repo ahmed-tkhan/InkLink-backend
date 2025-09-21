@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  inklink-backend:
+    build: .
+    container_name: inklink-backend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    volumes:
+      # Persist database and uploaded files
+      - inklink_data:/app/storage
+      - inklink_db:/app/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.inklink.rule=Host(`localhost`)"
+      - "traefik.http.services.inklink.loadbalancer.server.port=3000"
+
+  # Optional: Add Traefik reverse proxy for production deployments
+  traefik:
+    image: traefik:v2.10
+    container_name: inklink-traefik
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"  # Traefik dashboard
+    command:
+      - --api.dashboard=true
+      - --api.insecure=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --certificatesresolvers.le.acme.email=your-email@example.com
+      - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
+      - --certificatesresolvers.le.acme.httpchallenge=true
+      - --certificatesresolvers.le.acme.httpchallenge.entrypoint=web
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "traefik_letsencrypt:/letsencrypt"
+    profiles:
+      - production
+
+volumes:
+  inklink_data:
+    driver: local
+  inklink_db:
+    driver: local
+  traefik_letsencrypt:
+    driver: local
